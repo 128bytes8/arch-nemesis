@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Arch-Nemesis Command Cheatsheet</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=JetBrains+Mono&display=swap');
+
+        :root {
+            --bg: #0a0a0f;
+            --card: #161621;
+            --cyan: #00f3ff;
+            --magenta: #ff00ff;
+            --text: #e0e0e0;
+            --muted: #a0a0a0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: transparent;
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            width: 450px;
+            /* Perfect for an OBS sidebar */
+        }
+
+        .container {
+            background: var(--bg);
+            border: 2px solid var(--cyan);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: var(--cyan);
+            font-size: 24px;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 16px;
+            color: var(--magenta);
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        h2::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #333;
+            margin-left: 10px;
+        }
+
+        .command-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .cmd-item {
+            background: var(--card);
+            border-radius: 6px;
+            padding: 8px 12px;
+            border-left: 3px solid var(--cyan);
+        }
+
+        .cmd-line {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--cyan);
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .cmd-desc {
+            font-size: 13px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .key-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+            background: #111;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .highlight {
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Arch-Nemesis</h1>
+
+        <div class="section">
+            <h2>System Credentials</h2>
+            <div class="command-group">
+                <div class="cmd-item">
+                    <div class="cmd-line">User: <span class="highlight">bytes</span></div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-line">Pass: <span class="highlight">youtube</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>System Specs</h2>
+            <div class="key-grid">
+                <div>OS: <span class="highlight">Arch Linux</span></div>
+                <div>CPU: <span class="highlight">2 vCPUs</span></div>
+                <div>RAM: <span class="highlight">4GB</span></div>
+                <div>SSD: <span class="highlight">100GB</span></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Keyboard Control</h2>
+            <div class="command-group">
+                <div class="cmd-item">
+                    <div class="cmd-line">!type [text]</div>
+                    <div class="cmd-desc">Types whole strings into the VM</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-line">!key [name]</div>
+                    <div class="cmd-desc">Presses a specific special key</div>
+                </div>
+                <div class="cmd-item">
+                    <div class="cmd-line">[Single Char]</div>
+                    <div class="cmd-desc">Just type 'w' 'a' 's' 'd' etc to move</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Mouse Control</h2>
+            <div class="command-group">
+                <div class="cmd-item">
+                    <div class="cmd-line">!mouse [x] [y]</div>
+                    <div class="cmd-desc">Move cursor (0-100 coordinates)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Special Keys List</h2>
+            <div class="key-grid">
+                <div>enter <span class="highlight">← Return</span></div>
+                <div>esc <span class="highlight">← Escape</span></div>
+                <div>backspace</div>
+                <div>tab</div>
+                <div>spc <span class="highlight">← Space</span></div>
+                <div>alt / ctrl / shift</div>
+                <div>up / down</div>
+                <div>left / right</div>
+                <div>meta <span class="highlight">← Win Key</span></div>
+            </div>
+        </div>
+
+        <div style="font-size: 10px; text-align: center; color: #444; margin-top: 10px;">
+            POWERED BY ARCH-NEMESIS CONTROLLER
+        </div>
+    </div>
+
+</body>
+
+</html>
