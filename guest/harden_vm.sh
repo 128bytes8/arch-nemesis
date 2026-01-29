@@ -5,7 +5,10 @@
 echo "Hardening VM against shutdown..."
 
 # 1. Mask systemd targets (PERMANENT)
-systemctl mask poweroff.target reboot.target halt.target shutdown.target multi-user.target.wants/reboot.target
+# Masking these prevents systemd from reaching power-off states.
+systemctl mask poweroff.target reboot.target halt.target shutdown.target
+# Manually remove the symlink if mask didn't catch the multi-user dependency
+rm -f /etc/systemd/system/multi-user.target.wants/reboot.target 2>/dev/null
 
 # 2. Replace binaries with dummies and make them IMMUTABLE
 # We want to prevent 'shutdown', 'passwd', 'usermod', etc. from working.
