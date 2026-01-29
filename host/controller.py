@@ -38,33 +38,99 @@ def run_virsh_command(args):
         print(f"Failed to run virsh command: {' '.join(cmd)}")
 
 def send_key(key):
-    """Send a keystroke to the VM."""
-    # Mapping for some special keys to virsh codes if needed, 
-    # but virsh send-key usually accepts standard names.
-    print(f"Sending key: {key}")
-    run_virsh_command(["send-key", VM_NAME, key])
+    """Send a keystroke or combination to the VM. Supports 'ctrl-c', 'alt-tab', etc."""
+    mapping = {
+        "enter": "KEY_ENTER",
+        "esc": "KEY_ESC",
+        "backspace": "KEY_BACKSPACE",
+        "tab": "KEY_TAB",
+        "spc": "KEY_SPACE",
+        "up": "KEY_UP",
+        "down": "KEY_DOWN",
+        "left": "KEY_LEFT",
+        "right": "KEY_RIGHT",
+        "meta": "KEY_LEFTMETA",
+        "super": "KEY_LEFTMETA",
+        "win": "KEY_LEFTMETA",
+        "cmd": "KEY_LEFTMETA",
+        "ctrl": "KEY_LEFTCTRL",
+        "alt": "KEY_LEFTALT",
+        "shift": "KEY_LEFTSHIFT",
+        "capslock": "KEY_CAPSLOCK",
+        "caps": "KEY_CAPSLOCK",
+        "numlock": "KEY_NUMLOCK",
+        "num": "KEY_NUMLOCK",
+        "delete": "KEY_DELETE",
+        "del": "KEY_DELETE",
+        "f1": "KEY_F1", "f2": "KEY_F2", "f3": "KEY_F3", "f4": "KEY_F4",
+        "f5": "KEY_F5", "f6": "KEY_F6", "f7": "KEY_F7", "f8": "KEY_F8",
+        "f9": "KEY_F9", "f10": "KEY_F10", "f11": "KEY_F11", "f12": "KEY_F12",
+    }
+    
+    # Split by common delimiters for combinations
+    # Handle '^' as a shortcut for ctrl-
+    key_str = key.replace("^", "ctrl-").replace("+", "-")
+    parts = key_str.split("-")
+    keys_to_send = []
+    
+    for p in parts:
+        p_lower = p.lower()
+        if p_lower in mapping:
+            keys_to_send.append(mapping[p_lower])
+        else:
+            # Handle single letters (A-Z) and numbers
+            val = p.upper()
+            if len(val) == 1:
+                if val.isalpha():
+                    keys_to_send.append(f"KEY_{val}")
+                elif val.isdigit():
+                    keys_to_send.append(f"KEY_{val}")
+                else:
+                    # Fallback for other single chars
+                    keys_to_send.append(val)
+            else:
+                # Fallback for verbatim virsh names
+                keys_to_send.append(val)
+    
+    if keys_to_send:
+        print(f"Sending keys: {' + '.join(keys_to_send)}")
+        run_virsh_command(["send-key", VM_NAME] + keys_to_send)
 
 def send_text(text):
-    """Send text as a sequence of keys."""
-    # This is a bit complex as we need to map chars to keys. 
-    # For simplicity, we'll try to use `send-key` for each char.
-    # A more robust way might be QMP input-send-event but that's complex.
-    # We will just iterate.
+    """Send text by mapping characters to key chords."""
+    # Mapping for symbols that require SHIFT
+    shift_map = {
+        '!': 'KEY_1', '@': 'KEY_2', '#': 'KEY_3', '$': 'KEY_4', '%': 'KEY_5',
+        '^': 'KEY_6', '&': 'KEY_7', '*': 'KEY_8', '(': 'KEY_9', ')': 'KEY_0',
+        '_': 'KEY_MINUS', '+': 'KEY_EQUAL', '{': 'KEY_LEFTBRACE', '}': 'KEY_RIGHTBRACE',
+        '|': 'KEY_BACKSLASH', ':': 'KEY_SEMICOLON', '"': 'KEY_APOSTROPHE',
+        '<': 'KEY_COMMA', '>': 'KEY_DOT', '?': 'KEY_SLASH', '~': 'KEY_GRAVE'
+    }
+    # Mapping for symbols that do NOT require SHIFT
+    direct_map = {
+        ' ': 'KEY_SPACE', '-': 'KEY_MINUS', '=': 'KEY_EQUAL', '[': 'KEY_LEFTBRACE',
+        ']': 'KEY_RIGHTBRACE', '\\': 'KEY_BACKSLASH', ';': 'KEY_SEMICOLON',
+        "'": 'KEY_APOSTROPHE', ',': 'KEY_COMMA', '.': 'KEY_DOT', '/': 'KEY_SLASH',
+        '`': 'KEY_GRAVE'
+    }
+
     print(f"Typing: {text}")
     for char in text:
-        k = char
-        if char == " ":
-            k = "spc"
-        elif char == ".":
-            k = "dot"
-        elif char == "/":
-            k = "slash"
-        # Add more mappings as needed or let virsh complain
-        try:
-           run_virsh_command(["send-key", VM_NAME, k])
-           time.sleep(0.05) # Small delay
-        except:
-            pass
+        keys = []
+        if char.isupper():
+            keys = ["KEY_LEFTSHIFT", f"KEY_{char}"]
+        elif char.islower():
+            keys = [f"KEY_{char.upper()}"]
+        elif char.isdigit():
+            keys = [f"KEY_{char}"]
+        elif char in shift_map:
+            keys = ["KEY_LEFTSHIFT", shift_map[char]]
+        elif char in direct_map:
+            keys = [direct_map[char]]
+        
+        if keys:
+            run_virsh_command(["send-key", VM_NAME] + keys)
+            time.sleep(0.05)
 
 def move_mouse(x, y):
     """Move mouse to absolute coordinates (0-65535 for QEMU usually, or 0-100%).
@@ -134,7 +200,10 @@ def update_overlay():
             }
         
         try:
-            with open("../overlay/overlay_state.json", "w") as f:
+            # Get the directory of the current script
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            overlay_path = os.path.join(script_dir, "..", "overlay", "overlay_state.json")
+            with open(overlay_path, "w") as f:
                 json.dump(data, f)
         except Exception as e:
             print(f"Error updating overlay: {e}")
@@ -145,40 +214,43 @@ def parse_chat(video_id):
     chat = pytchat.create(video_id=video_id)
     print(f"Connected to chat: {video_id}")
     
-    while chat.is_alive():
-        for c in chat.get().sync_items():
-            msg = c.message
-            author = c.author.name
-            print(f"[{author}] {msg}")
-            
-            cmd_display = f"{author}: {msg}"
-            
-            with state_lock:
-                state["last_commands"].append(cmd_display)
-                if len(state["last_commands"]) > 20:
-                    state["last_commands"].pop(0)
+    try:
+        while chat.is_alive():
+            for c in chat.get().sync_items():
+                msg = c.message
+                author = c.author.name
+                print(f"[{author}] {msg}")
+                
+                cmd_display = f"{author}: {msg}"
+                
+                with state_lock:
+                    state["last_commands"].append(cmd_display)
+                    if len(state["last_commands"]) > 20:
+                        state["last_commands"].pop(0)
 
-            # Command Parsing
-            if msg.startswith("!type "):
-                text = msg[6:]
-                send_text(text)
-            elif msg.startswith("!key "):
-                key = msg[5:]
-                send_key(key)
-            elif msg.startswith("!mouse "): # !mouse 50 50
-                try:
-                    parts = msg.split()
-                    x = int(parts[1])
-                    y = int(parts[2])
-                    move_mouse(x, y)
-                except:
-                    pass
-            # Raw text typing for everything else? Maybe too chaotic. 
-            # Sticking to commands for now as requested "w+w+jump".
-            # If user wants raw input mapped:
-            # "w" -> send_key("w")
-            elif len(msg) == 1 and msg.isalnum():
-                 send_key(msg)
+                # Command Parsing
+                if msg.startswith("!type "):
+                    text = msg[6:]
+                    send_text(text)
+                elif msg.startswith("!key "):
+                    key = msg[5:]
+                    send_key(key)
+                elif msg.startswith("!mouse "): # !mouse 50 50
+                    try:
+                        parts = msg.split()
+                        x = int(parts[1])
+                        y = int(parts[2])
+                        move_mouse(x, y)
+                    except:
+                        pass
+                # Raw text typing for everything else
+                elif len(msg) == 1:
+                     send_key(msg)
+            time.sleep(0.1) # Small sleep to prevent CPU hogging
+    except Exception as e:
+        print(f"Error in chat loop: {e}")
+    finally:
+        print("Chat connection closed.")
                  
 def main():
     parser = argparse.ArgumentParser(description="YouTube to Arch VM Controller")
@@ -192,11 +264,19 @@ def main():
     # Start overlay updater
     threading.Thread(target=update_overlay, daemon=True).start()
     
-    # Start chat listener
-    try:
-        parse_chat(args.video_id)
-    except KeyboardInterrupt:
-        print("Stopping...")
+    # Start chat listener loop
+    while True:
+        try:
+            parse_chat(args.video_id)
+            print("Chat listener exited unexpectedly. Reconnecting...")
+        except KeyboardInterrupt:
+            print("Stopping...")
+            break
+        except Exception as e:
+            print(f"Fatal error in listener: {e}")
+        
+        print("Waiting 5 seconds before reconnecting...")
+        time.sleep(5)
 
 if __name__ == "__main__":
     main()
