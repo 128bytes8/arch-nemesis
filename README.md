@@ -1,5 +1,9 @@
 # 💀 Arch-Nemesis
 
+<p align="center">
+  <img src="media/logo.png" width="200" alt="Arch-Nemesis Logo">
+</p>
+
 **Arch-Nemesis** is a 24/7 interactive livestream experiment where YouTube Live Chat viewers have direct, raw control over a real Arch Linux virtual machine. 
 
 Can the community build a functional workspace, or will it descend into terminal chaos? 
