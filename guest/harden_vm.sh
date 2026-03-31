@@ -144,6 +144,7 @@ done
 # 7.  PREVENT FORK BOMBS & RESOURCE EXHAUSTION
 # -------------------------------------------------------------------
 echo "[7/12] Setting resource limits …"
+chattr -i /etc/security/limits.conf 2>/dev/null || true
 cat >> /etc/security/limits.conf <<'EOF'
 # Arch-Nemesis: prevent fork bombs and resource abuse
 *               hard    nproc           500
