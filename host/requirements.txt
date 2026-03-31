@@ -1,2 +1,5 @@
 pytchat
-libvirt-python
+
+# Optional: AI-based screen monitoring (enable with --screen-monitor)
+# nudenet
+# Pillow

@@ -3,130 +3,183 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Stream Control Overlay</title>
+    <title>Arch-Nemesis Overlay</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;700&display=swap');
+
+        :root {
+            --bg: rgba(10, 10, 15, 0.85);
+            --card: #161621;
+            --cyan: #00f3ff;
+            --red: #ff3860;
+            --green: #23d160;
+            --text: #e0e0e0;
+            --muted: #888;
+        }
+
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
+            font-family: 'Outfit', sans-serif;
+            background: transparent;
+            color: var(--text);
             margin: 0;
-            padding: 20px;
+            padding: 16px;
             overflow: hidden;
-            width: 400px;
-            /* Fixed width for sidebar overlay */
-            border-radius: 10px;
+            width: 420px;
+        }
+
+        .container {
+            background: var(--bg);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
+            margin-bottom: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .status-active .status-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .status-reboot .status-dot { background: var(--red); box-shadow: 0 0 6px var(--red); }
+
+        .status-text { font-weight: 700; font-size: 14px; }
+        .status-active .status-text { color: var(--green); }
+        .status-reboot .status-text {
+            color: var(--red);
+            animation: blink 1s infinite;
+        }
+
+        .shield {
+            font-size: 11px;
+            color: var(--cyan);
+            background: rgba(0, 243, 255, 0.1);
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 243, 255, 0.2);
         }
 
         h2 {
-            margin-top: 0;
-            border-bottom: 2px solid #00f3ff;
-            padding-bottom: 10px;
-        }
-
-        .vote-box {
-            background: #222;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            border: 1px solid #444;
-        }
-
-        .progress-bar {
-            background: #444;
-            height: 20px;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 5px;
-        }
-
-        .progress-fill {
-            background-color: #00f3ff;
-            height: 100%;
-            width: 0%;
-            transition: width 0.5s;
+            font-size: 13px;
+            color: var(--cyan);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0 0 8px 0;
         }
 
         .log-box {
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            background: #111;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            background: #0d0d14;
             padding: 10px;
-            height: 300px;
+            height: 260px;
             overflow-y: hidden;
-            /* Auto scroll */
-            border-radius: 5px;
+            border-radius: 6px;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
         }
 
         .log-entry {
-            margin-bottom: 4px;
-            border-bottom: 1px solid #222;
-            padding-bottom: 2px;
+            margin-bottom: 3px;
+            padding: 2px 0;
+            border-bottom: 1px solid #1a1a24;
+            line-height: 1.4;
         }
 
-        .status-active {
-            color: #0f0;
+        .blocked-section {
+            margin-top: 12px;
         }
 
-        .status-reboot {
-            color: #f00;
-            font-weight: bold;
-            animation: blink 1s infinite;
+        .blocked-box {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--red);
+            background: rgba(255, 56, 96, 0.05);
+            border: 1px solid rgba(255, 56, 96, 0.15);
+            border-radius: 6px;
+            padding: 8px;
+            max-height: 80px;
+            overflow-y: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
         }
 
-        @keyframes blink {
-            50% {
-                opacity: 0;
-            }
-        }
+        .blocked-entry { margin-bottom: 2px; opacity: 0.9; }
+
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 
 <body>
+    <div class="container">
+        <div class="status-bar">
+            <div id="status-wrapper" class="status-active">
+                <span class="status-dot"></span>
+                <span class="status-text" id="status">Active</span>
+            </div>
+            <div class="shield" id="shield">FILTER ON</div>
+        </div>
 
-    <div class="vote-box">
-        <div>System Status: <span id="status" class="status-active">Active</span></div>
-    </div>
+        <h2>Command Log</h2>
+        <div class="log-box" id="log-box"></div>
 
-    <h2>Command Log</h2>
-    <div class="log-box" id="log-box">
-        <!-- JS will populate -->
+        <div class="blocked-section">
+            <h2 style="color: var(--red);">Blocked</h2>
+            <div class="blocked-box" id="blocked-box">
+                <div class="blocked-entry" style="color: var(--muted);">Nothing blocked yet</div>
+            </div>
+        </div>
     </div>
 
     <script>
         async function update() {
             try {
-                // Add timestamp to prevent caching
-                const response = await fetch('overlay_state.json?' + new Date().getTime());
-                const data = await response.json();
+                const r = await fetch('overlay_state.json?' + Date.now());
+                const d = await r.json();
 
-                // Update Status
-                const statusEl = document.getElementById('status');
-                statusEl.textContent = data.status;
-                if (data.status.includes("Reboot")) {
-                    statusEl.className = "status-reboot";
-                } else {
-                    statusEl.className = "status-active";
-                }
+                const sw = document.getElementById('status-wrapper');
+                const st = document.getElementById('status');
+                st.textContent = d.status;
+                sw.className = d.status.includes('Reboot') ? 'status-reboot' : 'status-active';
 
-
-                // Update Log
-                const logBox = document.getElementById('log-box');
-                logBox.innerHTML = '';
-                data.commands.forEach(cmd => {
+                const lb = document.getElementById('log-box');
+                lb.innerHTML = '';
+                (d.commands || []).forEach(cmd => {
                     const div = document.createElement('div');
                     div.className = 'log-entry';
                     div.textContent = cmd;
-                    logBox.appendChild(div);
+                    lb.appendChild(div);
                 });
 
+                const bb = document.getElementById('blocked-box');
+                const blocked = d.blocked || [];
+                if (blocked.length) {
+                    bb.innerHTML = '';
+                    blocked.forEach(b => {
+                        const div = document.createElement('div');
+                        div.className = 'blocked-entry';
+                        div.textContent = b;
+                        bb.appendChild(div);
+                    });
+                }
             } catch (e) {
-                console.error("Fetch error:", e);
+                console.error('Fetch error:', e);
             }
         }
-
         setInterval(update, 1000);
         update();
     </script>

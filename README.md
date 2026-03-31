@@ -1,49 +1,113 @@
-# 💀 Arch-Nemesis
+# Arch-Nemesis
 
-<p align="center">
-  <img src="media/logo.png" width="200" alt="Arch-Nemesis Logo">
-</p>
+**YouTube Live Chat controls a real Arch Linux VM** – hardened against NSFW content and system destruction.
 
-**Arch-Nemesis** is a 24/7 interactive livestream experiment where YouTube Live Chat viewers have direct, raw control over a real Arch Linux virtual machine. 
+## Defence Layers
 
-Can the community build a functional workspace, or will it descend into terminal chaos? 
+| Layer | Where | What it does |
+|:------|:------|:-------------|
+| **DNS Filtering** | Guest VM | CleanBrowsing Family Filter blocks adult content at the resolver level |
+| **Hosts Blocklist** | Guest VM | 100k+ NSFW domains sinkholed via `/etc/hosts` (StevenBlack + oisd + UT1) |
+| **Firewall** | Guest VM | iptables forces all DNS through filtered resolver; blocks DoT, VPN, Tor ports |
+| **SafeSearch** | Guest VM | Google, YouTube, Bing forced to safe/restricted mode via hosts entries |
+| **Text Filter** | Host | NSFW keywords, blocked domains, and dangerous commands rejected before reaching VM |
+| **Rate Limiter** | Host | Per-user command throttling prevents spam |
+| **AI Screen Monitor** | Host (optional) | NudeNet scans VM screenshots and auto-closes NSFW windows |
+| **System Hardening** | Guest VM | Shutdown/reboot masked, dangerous binaries replaced, critical files immutable |
 
-## 🚀 Features
+## Project Structure
 
-- **Direct Chat Integration**: Commands typed in YouTube chat are relayed in real-time to the VM.
-- **Hardened for Chaos**: Custom guest-side hardening scripts prevent intentional reboots, shutdowns, or account lockouts.
-- **Beautiful OBS Overlays**: Includes dynamic command logs and a live cheatsheet for viewers.
-- **Advanced Input Mapping**: Supports full keyboard strings, special keys (Ctrl, Alt, Meta), and absolute mouse positioning.
+```
+host/              Host-side Python controller
+  controller.py      Main chat → VM bridge
+  content_filter.py  NSFW text/URL/command filtering
+  rate_limiter.py    Per-user rate limiting
+  screen_monitor.py  Optional AI screenshot monitoring
+  config.py          Tuneable constants
+  requirements.txt   Python dependencies
 
-## 🛠 Project Structure
+guest/             Scripts to run inside the VM (as root)
+  harden_vm.sh       Anti-brick system hardening
+  setup_content_filter.sh  DNS + hosts + firewall NSFW filtering
 
-- `host/`: Contains the `controller.py` script that listens to YouTube chat and sends inputs via `libvirt`.
-- `guest/`: Contains the `harden_vm.sh` script to be run inside the Arch VM to secure it.
-- `overlay/`: HTML/JS overlays for OBS Browser Sources.
+overlay/           OBS Browser Source overlays
+  index.html         Live command log + filter status
+  commands.html      Viewer cheatsheet
+```
 
-## ⌨️ Viewer Commands
+## Viewer Commands
 
 | Command | Action |
-| :--- | :--- |
-| `!type [text]` | Types whole strings into the VM |
-| `!key [name]` | Presses special keys (e.g., `!key enter`, `!key tab`) |
-| `!mouse [x] [y]` | Moves the cursor (0-100 scale) |
-| `[single char]` | Pressing 'w', 'a', 's', 'd' etc. works instantly. |
+|:--------|:-------|
+| `!type [text]` | Type a string (NSFW/dangerous content filtered) |
+| `!key [name]` | Press a key or combo (`enter`, `ctrl-c`, `alt-tab`) |
+| `!mouse [x] [y]` | Move cursor (0-100 scale) |
+| `!click [left\|right\|middle]` | Click a mouse button |
+| `[single char]` | Quick key press |
 
-## 🔧 Setup
+## Setup
 
-### 1. Host Setup
-1. Create a Python virtual environment: `python -m venv venv`
-2. Install requirements: `./venv/bin/pip install -r host/requirements.txt`
-3. Run the controller: `./venv/bin/python host/controller.py --video-id [VIDEO_ID] --vm-name [VM_NAME]`
+### 1. Guest VM Setup (run inside the Arch VM as root)
 
-### 2. Guest Setup
-1. Copy `guest/harden_vm.sh` to the VM.
-2. Run as root: `sudo ./harden_vm.sh`
-3. **Note your secret chattr name!** The script renames `chattr` to prevent viewers from lifting the hardening.
+```bash
+# Step 1: Harden against bricking
+sudo bash guest/harden_vm.sh
+# SAVE the secret chattr name printed at the end!
+
+# Step 2: Install NSFW content filter
+sudo bash guest/setup_content_filter.sh
+
+# Verify DNS filtering works:
+nslookup pornhub.com   # should return 0.0.0.0 or NXDOMAIN
+```
+
+### 2. Host Setup
+
+```bash
+python -m venv venv
+./venv/bin/pip install -r host/requirements.txt
+
+# Basic usage:
+./venv/bin/python host/controller.py --video-id VIDEO_ID --vm-name archlinux
+
+# With AI screen monitoring (install nudenet + Pillow first):
+./venv/bin/pip install nudenet Pillow
+./venv/bin/python host/controller.py --video-id VIDEO_ID --screen-monitor
+```
 
 ### 3. OBS Setup
-1. Add `overlay/index.html` (Command Log) and `overlay/commands.html` (Cheatsheet) as Browser Sources.
 
----
-*Created with 💀 by r3dg0d*
+Add as Browser Sources:
+- `overlay/index.html` – live command log + blocked commands
+- `overlay/commands.html` – viewer cheatsheet
+
+### CLI Options
+
+```
+--video-id ID         YouTube livestream video ID (required)
+--vm-name NAME        libvirt VM name (default: archlinux)
+--rate-limit N        Max commands per user per minute (default: 12)
+--cooldown SECS       Min seconds between commands (default: 1.0)
+--extra-keywords FILE Extra NSFW keywords file (one per line)
+--extra-domains FILE  Extra blocked domains file (one per line)
+--screen-monitor      Enable AI screenshot NSFW detection
+--monitor-interval S  Screenshot check interval (default: 5s)
+--nsfw-threshold F    NudeNet confidence threshold (default: 0.45)
+```
+
+## Extending the Blocklists
+
+Add custom keywords or domains without modifying source code:
+
+```bash
+# Extra keywords (one per line)
+echo "custom_bad_word" >> extra_keywords.txt
+
+# Extra domains (one per line)
+echo "badsite.com" >> extra_domains.txt
+
+# Use them:
+python host/controller.py --video-id ID \
+    --extra-keywords extra_keywords.txt \
+    --extra-domains extra_domains.txt
+```

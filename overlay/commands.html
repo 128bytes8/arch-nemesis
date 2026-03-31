@@ -3,9 +3,9 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Arch-Nemesis Command Cheatsheet</title>
+    <title>Arch-Nemesis Cheatsheet</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=JetBrains+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');
 
         :root {
             --bg: #0a0a0f;
@@ -23,7 +23,6 @@
             margin: 0;
             padding: 20px;
             width: 450px;
-            /* Perfect for an OBS sidebar */
         }
 
         .container {
@@ -32,7 +31,6 @@
             border-radius: 12px;
             padding: 20px;
             box-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
-            backdrop-filter: blur(10px);
         }
 
         h1 {
@@ -46,15 +44,13 @@
             padding-bottom: 10px;
         }
 
-        .section {
-            margin-bottom: 20px;
-        }
+        .section { margin-bottom: 18px; }
 
         h2 {
-            font-size: 16px;
+            font-size: 14px;
             color: var(--magenta);
             text-transform: uppercase;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
         }
@@ -70,13 +66,13 @@
         .command-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .cmd-item {
             background: var(--card);
             border-radius: 6px;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-left: 3px solid var(--cyan);
         }
 
@@ -84,66 +80,59 @@
             font-family: 'JetBrains Mono', monospace;
             color: var(--cyan);
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
         }
 
         .cmd-desc {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--muted);
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         .key-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 5px;
+            gap: 4px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 11px;
             color: var(--muted);
             background: #111;
-            padding: 10px;
+            padding: 8px;
             border-radius: 4px;
         }
 
-        .highlight {
-            color: white;
+        .highlight { color: white; }
+
+        .filter-notice {
+            text-align: center;
+            font-size: 10px;
+            color: var(--magenta);
+            margin-top: 12px;
+            padding: 6px;
+            border: 1px solid rgba(255, 0, 255, 0.2);
+            border-radius: 4px;
+            background: rgba(255, 0, 255, 0.05);
+        }
+
+        .footer {
+            font-size: 10px;
+            text-align: center;
+            color: #444;
+            margin-top: 10px;
         }
     </style>
 </head>
 
 <body>
-
     <div class="container">
         <h1>Arch-Nemesis</h1>
-
-        <div class="section">
-            <h2>System Credentials</h2>
-            <div class="command-group">
-                <div class="cmd-item">
-                    <div class="cmd-line">User: <span class="highlight">bytes</span></div>
-                </div>
-                <div class="cmd-item">
-                    <div class="cmd-line">Pass: <span class="highlight">youtube</span></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <h2>System Specs</h2>
-            <div class="key-grid">
-                <div>OS: <span class="highlight">Arch Linux</span></div>
-                <div>CPU: <span class="highlight">2 vCPUs</span></div>
-                <div>RAM: <span class="highlight">4GB</span></div>
-                <div>SSD: <span class="highlight">100GB</span></div>
-            </div>
-        </div>
 
         <div class="section">
             <h2>Keyboard Control</h2>
             <div class="command-group">
                 <div class="cmd-item">
                     <div class="cmd-line">!type [text]</div>
-                    <div class="cmd-desc">Types whole strings into the VM</div>
+                    <div class="cmd-desc">Type a string into the VM (filtered)</div>
                 </div>
                 <div class="cmd-item">
                     <div class="cmd-line">!key [name]</div>
@@ -154,8 +143,8 @@
                     <div class="cmd-desc">Shortcut for Ctrl (e.g. !key ^c)</div>
                 </div>
                 <div class="cmd-item">
-                    <div class="cmd-line">[Single Char]</div>
-                    <div class="cmd-desc">Just type 'w' 'a' 's' 'd' etc to move</div>
+                    <div class="cmd-line">[single char]</div>
+                    <div class="cmd-desc">Quick key press (w a s d etc.)</div>
                 </div>
             </div>
         </div>
@@ -167,32 +156,41 @@
                     <div class="cmd-line">!mouse [x] [y]</div>
                     <div class="cmd-desc">Move cursor (0-100 coordinates)</div>
                 </div>
+                <div class="cmd-item">
+                    <div class="cmd-line">!click [left|right|middle]</div>
+                    <div class="cmd-desc">Click a mouse button</div>
+                </div>
             </div>
         </div>
 
         <div class="section">
-            <h2>Special Keys List</h2>
+            <h2>Special Keys</h2>
             <div class="key-grid">
                 <div>enter / esc</div>
                 <div>backspace / tab / spc</div>
                 <div>ctrl / alt / shift</div>
                 <div>up / down / left / right</div>
-                <div>f1 - f12 <span class="highlight">← Func Keys</span></div>
-                <div>caps / num <span class="highlight">← Locks</span></div>
-                <div>meta / super <span class="highlight">← Win Key</span></div>
-                <div>del <span class="highlight">← Delete</span></div>
+                <div>f1 - f12 <span class="highlight">&larr; Func</span></div>
+                <div>caps / num <span class="highlight">&larr; Locks</span></div>
+                <div>meta / super <span class="highlight">&larr; Win</span></div>
+                <div>del / ins <span class="highlight">&larr; Edit</span></div>
+                <div>home / end</div>
+                <div>pgup / pgdn</div>
             </div>
-            <div style="font-size: 11px; color: var(--muted); margin-top: 10px; text-align: center;">
-                Use <span class="highlight">-</span> or <span class="highlight">+</span> for combinations (e.g. <span
-                    class="highlight">ctrl-c</span>)
+            <div style="font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center;">
+                Use <span class="highlight">-</span> or <span class="highlight">+</span> for combos
+                (e.g. <span class="highlight">ctrl-c</span>, <span class="highlight">alt+tab</span>)
             </div>
         </div>
 
-        <div style="font-size: 10px; text-align: center; color: #444; margin-top: 10px;">
+        <div class="filter-notice">
+            NSFW &amp; destructive commands are filtered and blocked
+        </div>
+
+        <div class="footer">
             POWERED BY ARCH-NEMESIS CONTROLLER
         </div>
     </div>
-
 </body>
 
 </html>

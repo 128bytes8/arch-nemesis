@@ -1,9 +1,17 @@
 __pycache__/
+*.pyc
+*.pyo
 *.json
 !overlay/index.html
+!overlay/commands.html
 overlay_state.json
 *.xml
 *.iso
+*.qcow2
+*.img
 .gemini/
 .agent/
 .DS_Store
+venv/
+.venv/
+*.log
