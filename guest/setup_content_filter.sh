@@ -27,6 +27,18 @@ echo "  Arch-Nemesis Content Filter Setup"
 echo "═══════════════════════════════════════════════"
 echo ""
 
+# Auto-detect chattr (harden_vm.sh renames it to a secret name)
+CHATTR="chattr"
+if ! command -v chattr &>/dev/null; then
+    CHATTR=$(find /usr/bin -maxdepth 1 -name 'chattr_*' -type f 2>/dev/null | head -1)
+    if [[ -z "$CHATTR" ]]; then
+        echo "WARNING: chattr not found. File immutability will be skipped."
+        CHATTR="true"  # no-op fallback
+    else
+        echo "Found renamed chattr: ${CHATTR}"
+    fi
+fi
+
 # CleanBrowsing Family Filter DNS
 DNS1="185.228.168.168"
 DNS2="185.228.169.168"
@@ -37,7 +49,7 @@ DNS2="185.228.169.168"
 echo "[1/7] Setting DNS to CleanBrowsing Family Filter …"
 
 # Remove immutable flag if it exists from a previous run
-chattr -i /etc/resolv.conf 2>/dev/null || true
+$CHATTR -i /etc/resolv.conf 2>/dev/null || true
 
 cat > /etc/resolv.conf <<EOF
 # Arch-Nemesis: CleanBrowsing Family Filter (blocks adult content)
@@ -49,7 +61,7 @@ EOF
 # If systemd-resolved is active, configure it too
 if systemctl is-active systemd-resolved &>/dev/null; then
     mkdir -p /etc/systemd/resolved.conf.d
-    chattr -i /etc/systemd/resolved.conf.d/arch-nemesis.conf 2>/dev/null || true
+    $CHATTR -i /etc/systemd/resolved.conf.d/arch-nemesis.conf 2>/dev/null || true
     cat > /etc/systemd/resolved.conf.d/arch-nemesis.conf <<EOF
 [Resolve]
 DNS=${DNS1} ${DNS2}
@@ -57,23 +69,23 @@ FallbackDNS=
 DNSOverTLS=no
 DNSSEC=no
 EOF
-    chattr +i /etc/systemd/resolved.conf.d/arch-nemesis.conf 2>/dev/null || true
+    $CHATTR +i /etc/systemd/resolved.conf.d/arch-nemesis.conf 2>/dev/null || true
     systemctl restart systemd-resolved 2>/dev/null || true
 fi
 
 # If NetworkManager is active, prevent it from overwriting resolv.conf
 if systemctl is-active NetworkManager &>/dev/null; then
     mkdir -p /etc/NetworkManager/conf.d
-    chattr -i /etc/NetworkManager/conf.d/arch-nemesis-dns.conf 2>/dev/null || true
+    $CHATTR -i /etc/NetworkManager/conf.d/arch-nemesis-dns.conf 2>/dev/null || true
     cat > /etc/NetworkManager/conf.d/arch-nemesis-dns.conf <<EOF
 [main]
 dns=none
 EOF
-    chattr +i /etc/NetworkManager/conf.d/arch-nemesis-dns.conf 2>/dev/null || true
+    $CHATTR +i /etc/NetworkManager/conf.d/arch-nemesis-dns.conf 2>/dev/null || true
 fi
 
 # Lock resolv.conf
-chattr +i /etc/resolv.conf
+$CHATTR +i /etc/resolv.conf
 
 echo "    DNS set to ${DNS1}, ${DNS2}"
 
@@ -185,11 +197,11 @@ sort -u "$HOSTS_COMBINED" > /tmp/hosts_deduped
 TOTAL_AFTER=$(wc -l < /tmp/hosts_deduped)
 
 # Unlock hosts file if locked from a previous run
-chattr -i /etc/hosts 2>/dev/null || true
+$CHATTR -i /etc/hosts 2>/dev/null || true
 cp /tmp/hosts_deduped /etc/hosts
 
 # Lock it
-chattr +i /etc/hosts
+$CHATTR +i /etc/hosts
 
 echo "    Installed ${TOTAL_AFTER} entries in /etc/hosts"
 rm -f "$HOSTS_TEMP" "$HOSTS_COMBINED" /tmp/hosts_deduped
@@ -270,8 +282,8 @@ systemctl enable iptables.service 2>/dev/null || true
 systemctl enable ip6tables.service 2>/dev/null || true
 
 # Lock the rule files
-chattr +i /etc/iptables/iptables.rules 2>/dev/null || true
-chattr +i /etc/iptables/ip6tables.rules 2>/dev/null || true
+$CHATTR +i /etc/iptables/iptables.rules 2>/dev/null || true
+$CHATTR +i /etc/iptables/ip6tables.rules 2>/dev/null || true
 
 echo "    Firewall rules persisted"
 
@@ -283,7 +295,7 @@ echo "[6/7] Enforcing SafeSearch via hosts entries …"
 # CleanBrowsing already enforces SafeSearch on Google, Bing, YouTube
 # via DNS.  As belt-and-suspenders, force Google/YouTube SafeSearch
 # by mapping to the restricted IPs.
-chattr -i /etc/hosts 2>/dev/null || true
+$CHATTR -i /etc/hosts 2>/dev/null || true
 cat >> /etc/hosts <<'EOF'
 
 # Force Google SafeSearch
@@ -307,7 +319,7 @@ cat >> /etc/hosts <<'EOF'
 0.0.0.0 duckduckgo.com
 0.0.0.0 www.duckduckgo.com
 EOF
-chattr +i /etc/hosts 2>/dev/null || true
+$CHATTR +i /etc/hosts 2>/dev/null || true
 
 echo "    SafeSearch enforcement added"
 
@@ -318,10 +330,10 @@ echo "[7/7] Final lockdown …"
 
 # Protect this script
 SCRIPT_PATH="$(realpath "$0")"
-chattr +i "$SCRIPT_PATH" 2>/dev/null || true
+$CHATTR +i "$SCRIPT_PATH" 2>/dev/null || true
 
 # Protect the network config files we created
-chattr +i /etc/resolv.conf 2>/dev/null || true
+$CHATTR +i /etc/resolv.conf 2>/dev/null || true
 
 echo ""
 echo "═══════════════════════════════════════════════"
