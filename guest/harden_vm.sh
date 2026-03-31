@@ -124,7 +124,6 @@ CRITICAL_FILES=(
     /etc/systemd/system.conf
     /etc/systemd/user.conf
     /etc/systemd/logind.conf
-    /etc/security/limits.conf
     /etc/pam.d/system-login
     /etc/pam.d/su
     /etc/pam.d/sudo
