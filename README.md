@@ -50,15 +50,15 @@ overlay/           OBS Browser Source overlays
 ### 1. Guest VM Setup (run inside the Arch VM as root)
 
 ```bash
-# Step 1: Harden against bricking
-sudo bash guest/harden_vm.sh
-# SAVE the secret chattr name printed at the end!
-
-# Step 2: Install NSFW content filter
+# Step 1: Install NSFW content filter (MUST run before hardening)
 sudo bash guest/setup_content_filter.sh
 
 # Verify DNS filtering works:
 nslookup pornhub.com   # should return 0.0.0.0 or NXDOMAIN
+
+# Step 2: Harden against bricking (locks down everything from step 1)
+sudo bash guest/harden_vm.sh
+# SAVE the secret chattr name printed at the end!
 ```
 
 ### 2. Host Setup
