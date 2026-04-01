@@ -239,6 +239,7 @@ cat > /etc/pacman.d/hooks/reapply-hardening.hook <<'EOF'
 Type = Package
 Operation = Install
 Operation = Upgrade
+Target = *
 
 [Action]
 Description = Re-applying Arch-Nemesis binary protections …
