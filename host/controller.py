@@ -41,9 +41,9 @@ from rate_limiter import RateLimiter
 from screen_monitor import ScreenMonitor
 
 try:
-    import pytchat
+    from chat_downloader import ChatDownloader
 except ImportError:
-    print("FATAL: pytchat not installed.  Run:  pip install pytchat")
+    print("FATAL: chat-downloader not installed.  Run:  pip install chat-downloader")
     sys.exit(1)
 
 # ── Logging ───────────────────────────────────────────────────────────
@@ -287,77 +287,76 @@ def parse_chat(
     content_filter: ContentFilter,
     rate_limiter: RateLimiter,
 ) -> None:
-    chat = pytchat.create(video_id=video_id)
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    chat = ChatDownloader().get_chat(url, message_groups=["messages"])
     log.info("Connected to YouTube chat: %s", video_id)
 
     try:
-        while chat.is_alive():
-            for c in chat.get().sync_items():
-                msg: str = c.message.strip()
-                author: str = c.author.name
+        for item in chat:
+            msg: str = (item.get("message") or "").strip()
+            author: str = item.get("author", {}).get("name", "Unknown")
 
-                if not msg:
+            if not msg:
+                continue
+
+            log.info("[%s] %s", author, msg)
+
+            # ── Rate limit ────────────────────────────────────────
+            if not rate_limiter.is_allowed(author):
+                log.debug("Rate-limited: %s", author)
+                continue
+
+            _add_command(author, msg)
+
+            # ── !type <text> ──────────────────────────────────────
+            if msg.startswith("!type "):
+                text = msg[6:]
+                if len(text) > MAX_TYPE_LENGTH:
+                    log.warning("Text too long from %s (%d chars)", author, len(text))
+                    _add_blocked(author, f"text too long ({len(text)} chars)")
                     continue
-
-                log.info("[%s] %s", author, msg)
-
-                # ── Rate limit ────────────────────────────────────────
-                if not rate_limiter.is_allowed(author):
-                    log.debug("Rate-limited: %s", author)
+                ok, reason = content_filter.filter_type_command(text)
+                if not ok:
+                    log.warning("BLOCKED !type from %s: %s", author, reason)
+                    _add_blocked(author, reason)
                     continue
+                send_text(text)
 
-                _add_command(author, msg)
+            # ── !key <name> ───────────────────────────────────────
+            elif msg.startswith("!key "):
+                key = msg[5:].strip()
+                if not key:
+                    continue
+                ok, reason = content_filter.filter_key_command(key)
+                if not ok:
+                    log.warning("BLOCKED !key from %s: %s", author, reason)
+                    _add_blocked(author, reason)
+                    continue
+                send_key(key)
 
-                # ── !type <text> ──────────────────────────────────────
-                if msg.startswith("!type "):
-                    text = msg[6:]
-                    if len(text) > MAX_TYPE_LENGTH:
-                        log.warning("Text too long from %s (%d chars)", author, len(text))
-                        _add_blocked(author, f"text too long ({len(text)} chars)")
-                        continue
-                    ok, reason = content_filter.filter_type_command(text)
-                    if not ok:
-                        log.warning("BLOCKED !type from %s: %s", author, reason)
-                        _add_blocked(author, reason)
-                        continue
-                    send_text(text)
-
-                # ── !key <name> ───────────────────────────────────────
-                elif msg.startswith("!key "):
-                    key = msg[5:].strip()
-                    if not key:
-                        continue
-                    ok, reason = content_filter.filter_key_command(key)
-                    if not ok:
-                        log.warning("BLOCKED !key from %s: %s", author, reason)
-                        _add_blocked(author, reason)
-                        continue
-                    send_key(key)
-
-                # ── !mouse x y ────────────────────────────────────────
-                elif msg.startswith("!mouse "):
-                    try:
-                        parts = msg.split()
-                        x, y = int(parts[1]), int(parts[2])
-                        move_mouse(x, y)
-                    except (IndexError, ValueError):
-                        pass
-
-                # ── !click [button] ───────────────────────────────────
-                elif msg.startswith("!click"):
+            # ── !mouse x y ────────────────────────────────────────
+            elif msg.startswith("!mouse "):
+                try:
                     parts = msg.split()
-                    button = parts[1].lower() if len(parts) > 1 else "left"
-                    click_mouse(button)
+                    x, y = int(parts[1]), int(parts[2])
+                    move_mouse(x, y)
+                except (IndexError, ValueError):
+                    pass
 
-                # ── !vote (reboot) ────────────────────────────────────
-                elif msg.strip() == "!vote":
-                    handle_vote()
+            # ── !click [button] ───────────────────────────────────
+            elif msg.startswith("!click"):
+                parts = msg.split()
+                button = parts[1].lower() if len(parts) > 1 else "left"
+                click_mouse(button)
 
-                # ── Single-character shortcut ─────────────────────────
-                elif len(msg) == 1:
-                    send_key(msg)
+            # ── !vote (reboot) ────────────────────────────────────
+            elif msg.strip() == "!vote":
+                handle_vote()
 
-            time.sleep(0.1)
+            # ── Single-character shortcut ─────────────────────────
+            elif len(msg) == 1:
+                send_key(msg)
+
     except Exception as exc:
         log.error("Chat loop error: %s", exc)
     finally:
