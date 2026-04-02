@@ -5,9 +5,9 @@
 #  Run ONCE inside the guest VM as root (AFTER harden_vm.sh).
 #
 #  Layers applied:
-#    1. DNS → CleanBrowsing Family Filter (blocks porn at resolver level)
+#    1. DNS → libvirt gateway (which forwards to Mullvad's adult-blocking DNS)
 #    2. /etc/hosts → massive NSFW domain blocklist (downloaded)
-#    3. iptables → force all DNS through our filtered resolver
+#    3. iptables → force all DNS through gateway only
 #    4. Block DNS-over-TLS (port 853)
 #    5. Block common VPN/proxy/Tor ports
 #    6. Block known DNS-over-HTTPS domains (in hosts file)
@@ -39,23 +39,22 @@ if ! command -v chattr &>/dev/null; then
     fi
 fi
 
-# CleanBrowsing Family Filter DNS
-DNS1="185.228.168.168"
-DNS2="185.228.169.168"
+# Gateway DNS (libvirt's dnsmasq on the host, forwarding to Mullvad's
+# adult-content-blocking DNS).  This avoids Mullvad's DNS-leak firewall
+# rules which reject all port-53 traffic to non-Mullvad servers.
+GATEWAY_DNS="192.168.122.1"
 
 # -------------------------------------------------------------------
 # 1.  CONFIGURE FILTERED DNS
 # -------------------------------------------------------------------
-echo "[1/7] Setting DNS to CleanBrowsing Family Filter …"
+echo "[1/7] Setting DNS to libvirt gateway (Mullvad adult-blocking upstream) …"
 
 # Remove immutable flag if it exists from a previous run
 $CHATTR -i /etc/resolv.conf 2>/dev/null || true
 
 cat > /etc/resolv.conf <<EOF
-# Arch-Nemesis: CleanBrowsing Family Filter (blocks adult content)
-nameserver ${DNS1}
-nameserver ${DNS2}
-options edns0
+# Arch-Nemesis: use libvirt gateway DNS (Mullvad adult-content-blocking upstream)
+nameserver ${GATEWAY_DNS}
 EOF
 
 # If systemd-resolved is active, configure it too
@@ -64,7 +63,7 @@ if systemctl is-active systemd-resolved &>/dev/null; then
     $CHATTR -i /etc/systemd/resolved.conf.d/arch-nemesis.conf 2>/dev/null || true
     cat > /etc/systemd/resolved.conf.d/arch-nemesis.conf <<EOF
 [Resolve]
-DNS=${DNS1} ${DNS2}
+DNS=${GATEWAY_DNS}
 FallbackDNS=
 DNSOverTLS=no
 DNSSEC=no
@@ -87,7 +86,7 @@ fi
 # Lock resolv.conf
 $CHATTR +i /etc/resolv.conf
 
-echo "    DNS set to ${DNS1}, ${DNS2}"
+echo "    DNS set to ${GATEWAY_DNS} (gateway)"
 
 # -------------------------------------------------------------------
 # 2.  DOWNLOAD NSFW HOSTS BLOCKLIST
@@ -220,11 +219,9 @@ iptables -A OUTPUT -o lo -j ACCEPT
 # Allow established connections
 iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
-# Allow DNS ONLY to our filtered resolvers
-iptables -A OUTPUT -p udp --dport 53 -d ${DNS1} -j ACCEPT
-iptables -A OUTPUT -p udp --dport 53 -d ${DNS2} -j ACCEPT
-iptables -A OUTPUT -p tcp --dport 53 -d ${DNS1} -j ACCEPT
-iptables -A OUTPUT -p tcp --dport 53 -d ${DNS2} -j ACCEPT
+# Allow DNS ONLY to our gateway resolver
+iptables -A OUTPUT -p udp --dport 53 -d ${GATEWAY_DNS} -j ACCEPT
+iptables -A OUTPUT -p tcp --dport 53 -d ${GATEWAY_DNS} -j ACCEPT
 
 # Block ALL other DNS (prevents resolver bypass)
 iptables -A OUTPUT -p udp --dport 53 -j DROP
@@ -340,10 +337,13 @@ echo "════════════════════════�
 echo "  Content filter setup complete."
 echo ""
 echo "  Defence layers active:"
-echo "    ✓ DNS:       CleanBrowsing Family Filter"
+echo "    ✓ DNS:       Gateway → Mullvad (adult-content-blocking)"
 echo "    ✓ Hosts:     NSFW domain blocklist installed"
 echo "    ✓ Firewall:  DNS bypass prevention"
 echo "    ✓ SafeSearch: Google/YouTube/Bing forced"
+echo ""
+echo "  IMPORTANT: On the HOST, run:"
+echo "    mullvad dns set default --block-adult-content --block-malware"
 echo ""
 echo "  Test:  nslookup pornhub.com  (should NXDOMAIN or 0.0.0.0)"
 echo "═══════════════════════════════════════════════"
