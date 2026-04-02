@@ -1,4 +1,4 @@
-chat-downloader
+pytchat
 
 # Optional: AI-based screen monitoring (enable with --screen-monitor)
 # nudenet
