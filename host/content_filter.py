@@ -259,6 +259,8 @@ _DANGEROUS_PATTERNS: list[str] = [
 
     # Filesystem / attribute tampering
     r'\bchattr\b',
+    r'\bsetfacl\b',
+    r'\bgetfacl\b',
 
     # chmod – block all destructive patterns, not just absolute paths
     r'\bchmod\s+000',
@@ -362,6 +364,25 @@ _DANGEROUS_PATTERNS: list[str] = [
     r'\bbash\s+\S',
     r'\bzsh\s+\S',
     r'\b\./\S',
+
+    # ── Environment variable sabotage ─────────────────────────────
+    r'\bexport\s+PATH\b',
+    r'\bexport\s+LD_PRELOAD\b',
+    r'\bexport\s+LD_LIBRARY_PATH\b',
+    r'\bexport\s+HOME\b',
+    r'\bexport\s+SHELL\b',
+    r'\bexport\s+USER\b',
+    r'\bexport\s+TERM\b',
+    r'\bunset\s+PATH\b',
+    r'\bunset\s+HOME\b',
+    r'\bunset\s+SHELL\b',
+    r'\bPATH\s*=',
+    r'\bLD_PRELOAD\s*=',
+    r'\bLD_LIBRARY_PATH\s*=',
+
+    # rm with variables or quotes (used to bypass path detection)
+    r'\brm\s+(-[a-zA-Z]*\s+)*["\$]',
+    r'\brm\s+-[a-zA-Z]*r[a-zA-Z]*\b',
 ]
 
 # ═══════════════════════════════════════════════════════════════════════

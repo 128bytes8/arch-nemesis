@@ -54,6 +54,8 @@ FORBIDDEN_CMDS=(
     mkinitcpio dracut
     # Boot modification
     grub-install grub-mkconfig efibootmgr bootctl
+    # ACL manipulation (alternative to chmod for permission destruction)
+    setfacl
     # Encoding / obfuscation tools (used to bypass content filters)
     base64 base32 xxd uuencode uudecode
 )
@@ -218,7 +220,7 @@ chattr +i /etc/pacman.d/hooks/protect-critical.hook 2>/dev/null || true
 #     immediately put them back.
 cat > /usr/local/bin/arch-nemesis-reapply.sh <<'REAPPLY'
 #!/bin/bash
-FORBIDDEN="shutdown poweroff reboot halt passwd usermod useradd userdel groupmod groupadd groupdel chsh dd mkfs fdisk parted wipefs shred sgdisk gdisk cfdisk sfdisk mkswap mkfs.ext4 mkfs.btrfs mkfs.xfs mkfs.vfat insmod rmmod modprobe depmod sysctl mkinitcpio dracut grub-install grub-mkconfig efibootmgr bootctl base64 base32 xxd uuencode uudecode"
+FORBIDDEN="shutdown poweroff reboot halt passwd usermod useradd userdel groupmod groupadd groupdel chsh dd mkfs fdisk parted wipefs shred sgdisk gdisk cfdisk sfdisk mkswap mkfs.ext4 mkfs.btrfs mkfs.xfs mkfs.vfat insmod rmmod modprobe depmod sysctl mkinitcpio dracut grub-install grub-mkconfig efibootmgr bootctl setfacl base64 base32 xxd uuencode uudecode"
 
 for cmd in $FORBIDDEN; do
     target="/usr/bin/${cmd}"
@@ -353,6 +355,13 @@ cat > /etc/profile.d/arch-nemesis-noeval.sh <<'NOEVAL'
 if [[ $EUID -ne 0 ]]; then
     eval() { echo "eval: blocked by Arch-Nemesis." >&2; return 1; }
     export -f eval 2>/dev/null || true
+
+    # Lock critical environment variables so they can't be nuked
+    readonly PATH
+    readonly HOME
+    readonly SHELL
+    readonly USER
+    readonly TERM
 fi
 NOEVAL
 chattr +i /etc/profile.d/arch-nemesis-noeval.sh 2>/dev/null || true
