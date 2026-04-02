@@ -217,11 +217,29 @@ _DANGEROUS_PATTERNS: list[str] = [
     # systemd targets, dummy binaries) is the real last-resort
     # defence against privilege abuse.
 
+    # ── Command chaining (one command per !type only) ───────────
+    # Blocks ; && || & so users can't hide malicious commands
+    # after innocent-looking ones (e.g. "echo hi & chmod 000 /")
+    r';',
+    r'&&',
+    r'\|\|',
+    r'\s&\s',
+    r'\s&$',
+
     # Service / init disruption
-    r'\bsystemctl\s+(disable|mask|stop|kill)\s',
+    r'\bsystemctl\s+(disable|mask|stop|kill|reboot|poweroff|halt)\b',
+    r'\bsystemctl\s+--when\b',
     r'\bkill\s+-9?\s*1\b',
     r'\bkillall\b',
+    r'\bpkill\b',
     r'\bkill\s+-(?:KILL|STOP|TERM)\s',
+
+    # Background / detach (used to hide long-running destructive ops)
+    r'\bdisown\b',
+    r'\bnohup\b',
+    r'\bscreen\b',
+    r'\btmux\b',
+    r'\bsetsid\b',
 
     # Package manager removal of critical packages
     r'\bpacman\s+-[A-Za-z]*R',
@@ -235,15 +253,75 @@ _DANGEROUS_PATTERNS: list[str] = [
     r'\bnftables\b',
     r'\bnft\s',
     r'\bip\s+route\b',
-    r'\bip\s+addr\b',
     r'\bnmcli\b',
     r'\bnetworkctl\b',
     r'\bresolvectl\b',
 
     # Filesystem / attribute tampering
     r'\bchattr\b',
+
+    # chmod – block all destructive patterns, not just absolute paths
+    r'\bchmod\s+000',
+    r'\bchmod\s+777',
     r'\bchmod\s+[0-7]{3,4}\s+/',
+    r'\bchmod\s+(-[a-zA-Z]*R[a-zA-Z]*\s+)',
+    r'\bchmod\s+[augo]*[+-].*/',
+    r'\bchmod\s+a-rwx',
+    r'\bchmod\s+[0-7]{3,4}\s+[*.]',
+    r'\bchmod\s+[0-7]{3,4}\s+~',
+    r'\bfind\b.*-exec\s+chmod\b',
+    r'\bxargs\b.*\bchmod\b',
+
+    # chown – block all recursive and system-path patterns
     r'\bchown\s+.*\s+/',
+    r'\bchown\s+(-[a-zA-Z]*R[a-zA-Z]*\s+)',
+    r'\bfind\b.*-exec\s+chown\b',
+    r'\bxargs\b.*\bchown\b',
+
+    # ── Encoding / obfuscation bypass prevention ──────────────────
+    # These were used to smuggle destructive commands past filters
+    r'\bbase64\b',
+    r'\bbase32\b',
+    r'\bxxd\b',
+    r'\bod\s+-',
+    r'\buuencode\b',
+    r'\buudecode\b',
+
+    # Eval / dynamic execution
+    r'\beval\b',
+    r'\bexec\b',
+    r'\bsource\s',
+    r'\b\.\s+/',
+
+    # Inline code execution in scripting languages
+    r'\bpython[23]?\s+-c\b',
+    r'\bperl\s+-[a-zA-Z]*e',
+    r'\bruby\s+-[a-zA-Z]*e',
+    r'\blua\s+-e\b',
+    r'\bnode\s+-e\b',
+    r'\bawk\b',
+    r'\bsed\b',
+
+    # Pipe/redirect to shell (any source, not just curl/wget)
+    r'\|\s*(ba)?sh\b',
+    r'\|\s*zsh\b',
+    r'\|\s*fish\b',
+    r'\|\s*dash\b',
+    r'\|\s*/bin/(ba)?sh\b',
+
+    # Command substitution (backticks and $())
+    r'`[^`]+`',
+    r'\$\([^)]+\)',
+
+    # Here-strings / here-docs piped or redirected to interpreters
+    r'<<<.*\b(ba)?sh\b',
+    r'<<\s*\w+.*\b(ba)?sh\b',
+
+    # printf / echo with escape sequences (obfuscation vector)
+    r'\bprintf\s.*\\x',
+    r'\becho\s+-[a-zA-Z]*e.*\\x',
+    r'\bprintf\s.*\\[0-7]{3}',
+    r'\becho\s+-[a-zA-Z]*e.*\\[0-7]{3}',
 
     # Kernel / module tampering
     r'\binsmod\b',
@@ -262,9 +340,28 @@ _DANGEROUS_PATTERNS: list[str] = [
     r'\bumount\b',
     r'\bswapoff\b',
 
-    # Pipe-to-shell attacks
+    # Pipe-to-shell attacks (keeping explicit curl/wget for clarity)
     r'\bcurl\b.*\|\s*(ba)?sh',
     r'\bwget\b.*\|\s*(ba)?sh',
+
+    # Prevent writing scripts to disk and executing them
+    r'\bchmod\s+\+x\b',
+    r'\btee\s',
+    r'>\s*/tmp/',
+    r'>\s*/var/tmp/',
+    r'>\s*/dev/shm/',
+
+    # Block writes/redirects to system paths
+    r'>\s*/etc/',
+    r'>\s*/usr/',
+    r'>\s*/boot/',
+    r'>\s*/var/',
+
+    # Direct shell invocation of scripts
+    r'\bsh\s+\S',
+    r'\bbash\s+\S',
+    r'\bzsh\s+\S',
+    r'\b\./\S',
 ]
 
 # ═══════════════════════════════════════════════════════════════════════
